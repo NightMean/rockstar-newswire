@@ -6,10 +6,18 @@ enableDiscord: true # Post updates to Discord via Webhook
 enableRSS: true     # Generate RSS feed  (feed.xml)
 mergeFeeds: false    # If true, all enabled genres are merged into one feed.xml. If false, separate feed-[genre].xml files are created.
 
-# Discord Webhook URL
+# Discord Configuration
 # You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
 # If the environment variable is set, it will take precedence over this value.
 webhookUrl: "YOUR_WEBHOOK_URL_HERE"
+
+# Discord Bot Profile
+discordProfileName: "Rockstar Newswire Tracker"
+discordAvatarUrl: "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj"
+
+# Date Format for Discord Footer
+# Options: "DD/MM/YYYY" or "MM/DD/YYYY"
+dateFormat: "DD/MM/YYYY"
 
 # Refresh Interval 
 # Time in MINUTES (default: 120 = 2 hours)
@@ -26,7 +34,7 @@ refreshInterval: 120
 genres:
   - red_dead_online
   - circoloco_records
-#  - latest
+  - latest
 
 # === Other Categories (Uncomment to enable) ===
 #  - announcements

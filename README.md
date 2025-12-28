@@ -57,6 +57,7 @@ See `config.yaml` for the full list of supported genres. You can uncomment any g
 
 - `latest`
 - `announcements`
+- `grand_theft_auto_vi`
 - `gta_online`
 - `red_dead_online`
 - ... and many others.
@@ -78,6 +79,12 @@ const tracker = new newswire('gta_online', {
     refreshInterval: 7200000
 });
 ```
+
+## Discord notification
+![Discord notification demo](discord_demo.png)
+
+## RSS feed (from FreshRSS)
+![RSS feed demo](rss_demo.png)
 
 ## Credits
 - [Rockstar Games Newswire](https://www.rockstargames.com/newswire)

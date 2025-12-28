@@ -85,6 +85,9 @@ class newswire {
         this.enableRSS = options.enableRSS;
         this.onRSSUpdate = options.onRSSUpdate; // Callback for RSS data
         this.refreshInterval = options.refreshInterval || 7.2e+6;
+        this.discordProfileName = options.discordProfileName;
+        this.discordAvatarUrl = options.discordAvatarUrl;
+        this.dateFormat = options.dateFormat;
 
         // Remove direct main() call from constructor to allow async/better flow control if needed, 
         // but for now keeping it to match original behavior but invoking with new config
@@ -96,8 +99,9 @@ class newswire {
         await articlesLoaded;
 
         let article;
-        console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every ' + (this.refreshInterval / 60000) + ' minutes.');
+        // console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every ' + (this.refreshInterval / 60000) + ' minutes.');
         // console.log('[INIT] Fetching API Token (this may take a minute)...'); // Moved to getHashToken
+        console.log('[READY] Started news feed for ' + this.genre + '.');
         newsHash = await getHashToken();
 
         if (this.enableRSS) {
@@ -125,9 +129,31 @@ class newswire {
     sendArticle(article) {
         if (!this.webhook) return;
         console.log(`[NEW] ${this.genre}: ${article.title} (${article.link})`);
+
+        let dateStr = article.date;
+        try {
+            const dateObj = new Date(article.date);
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const year = dateObj.getFullYear();
+
+            if (this.dateFormat === 'MM/DD/YYYY') {
+                dateStr = `${month}/${day}/${year}`;
+            } else {
+                // Default to DD/MM/YYYY
+                dateStr = `${day}/${month}/${year}`;
+            }
+        } catch (e) {
+            console.error('[ERROR] Failed to format date:', e);
+        }
+
         article.tags = article.tags.join(', ');
-        const embed = {
-            'embeds': [{
+
+        // Construct Webhook Payload with custom username/avatar and embed
+        const payload = {
+            username: this.discordProfileName,
+            avatar_url: this.discordAvatarUrl,
+            embeds: [{
                 'author': {
                     'name': 'Rockstar Newswire',
                     'url': 'https://www.rockstargames.com/newswire',
@@ -143,10 +169,11 @@ class newswire {
                 },
                 'footer': {
                     "icon_url": "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj",
-                    "text": article.tags + ' • ' + article.date
+                    "text": article.tags + ' • ' + dateStr
                 }
             }]
         };
+
         const req = request(this.webhook, requestOptions, (res) => {
             if (res.statusCode < 200 || res.statusCode > 299) {
                 console.error('[ERROR] Unable to process request: ' + res.statusCode + '\nReason: ' + res.statusMessage);
@@ -165,7 +192,7 @@ class newswire {
             console.error('[ERROR] Request timedout');
         })
 
-        req.write(JSON.stringify(embed));
+        req.write(JSON.stringify(payload));
         req.end();
     }
 

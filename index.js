@@ -34,7 +34,8 @@ const MERGE_FEEDS = config.mergeFeeds !== false;
 const allArticles = {};
 
 // Start Newswire Instances
-console.log(`[INIT] Starting Rockstar Newswire Tracker...`);
+const packageJson = require('./package.json');
+console.log(`[INIT] Starting Rockstar Newswire Tracker v${packageJson.version}`);
 console.log(`[INIT] Enabled Genres: ${genres.join(', ')}`);
 console.log(`[INIT] Services: Discord=${config.enableDiscord}, RSS=${config.enableRSS}`);
 console.log(`[INIT] RSS Mode: ${MERGE_FEEDS ? 'Merged (feed.xml)' : 'Separate (feed-[genre].xml)'}`);
@@ -45,6 +46,9 @@ genres.forEach(genre => {
         webhookUrl: config.enableDiscord ? config.webhookUrl : null,
         enableRSS: config.enableRSS,
         refreshInterval: (config.refreshInterval || 120) * 60 * 1000, // Convert minutes to ms
+        discordProfileName: config.discordProfileName || "Rockstar Newswire Tracker",
+        discordAvatarUrl: config.discordAvatarUrl || "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj",
+        dateFormat: config.dateFormat || "DD/MM/YYYY",
         onRSSUpdate: (items) => {
             console.log(`[RSS] Received ${items.length} articles for ${genre}`);
             allArticles[genre] = items;
