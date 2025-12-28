@@ -4,6 +4,7 @@
 # Set to true or false to toggle functionality.
 enableDiscord: true # Post updates to Discord via Webhook
 enableRSS: true     # Generate RSS feed  (feed.xml)
+mergeFeeds: false    # If true, all enabled genres are merged into one feed.xml. If false, separate feed-[genre].xml files are created.
 
 # Discord Webhook URL
 # You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
@@ -23,7 +24,9 @@ refreshInterval: 120
 
 # === Default ===
 genres:
-  - latest
+  - red_dead_online
+  - circoloco_records
+#  - latest
 
 # === Other Categories (Uncomment to enable) ===
 #  - announcements

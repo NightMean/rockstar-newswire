@@ -83,6 +83,7 @@ class newswire {
         this.genreID = genres[genre];
         this.webhook = options.webhookUrl;
         this.enableRSS = options.enableRSS;
+        this.onRSSUpdate = options.onRSSUpdate; // Callback for RSS data
         this.refreshInterval = options.refreshInterval || 7.2e+6;
 
         // Remove direct main() call from constructor to allow async/better flow control if needed, 
@@ -96,10 +97,13 @@ class newswire {
 
         let article;
         console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every ' + (this.refreshInterval / 60000) + ' minutes.');
-        console.log('[INIT] Fetching API Token (this may take a minute)...');
+        // console.log('[INIT] Fetching API Token (this may take a minute)...'); // Moved to getHashToken
         newsHash = await getHashToken();
 
-        if (this.enableRSS) await this.updateRSS();
+        if (this.enableRSS) {
+            const items = await this.updateRSS();
+            if (this.onRSSUpdate) this.onRSSUpdate(items);
+        }
 
         article = await this.getNewArticle();
         if (!(article instanceof TypeError) && article.title) {
@@ -108,7 +112,10 @@ class newswire {
         setInterval(async _ => {
             console.log('[REFRESH] Refreshing news feed for ' + this.genre);
 
-            if (this.enableRSS) await this.updateRSS();
+            if (this.enableRSS) {
+                const items = await this.updateRSS();
+                if (this.onRSSUpdate) this.onRSSUpdate(items);
+            }
 
             article = await this.getNewArticle();
             !(article instanceof TypeError) && article.title ? this.sendArticle(article) : console.log(article.message);
@@ -128,7 +135,7 @@ class newswire {
                 },
                 'title': article.title,
                 'url': article.link,
-                'description': article.tags,
+                'description': article.subtitle || "",
                 'color': 16756992,
                 'fields': [],
                 'image': {
@@ -136,7 +143,7 @@ class newswire {
                 },
                 'footer': {
                     "icon_url": "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj",
-                    "text": article.tags + ' | ' + article.date
+                    "text": article.tags + ' • ' + article.date
                 }
             }]
         };
@@ -181,13 +188,25 @@ class newswire {
                 let tags = [];
                 article.url = 'https://www.rockstargames.com' + article.url;
                 await article.primary_tags.map(tag => tags.push(tag.name))
+                let subtitle = "";
+                try {
+                    // Fetch full article to get subtitle
+                    const fullDetails = await this.getArticle(article.id);
+                    if (fullDetails && fullDetails.tina && fullDetails.tina.payload && fullDetails.tina.payload.meta) {
+                        subtitle = fullDetails.tina.payload.meta.subtitle || "";
+                    }
+                } catch (err) {
+                    console.error('[ERROR] Failed to fetch article details for subtitle:', err);
+                }
+
                 addArticle(article.id.toString(), article.url);
                 return {
                     title: article.title,
                     link: article.url,
                     img: article['preview_images_parsed']['newswire_block']['d16x9'],
                     date: article.created,
-                    tags: tags
+                    tags: tags,
+                    subtitle: subtitle
                 }
             } else {
                 return new TypeError('[CHECK] No new articles found for ' + this.genre)
@@ -196,7 +215,7 @@ class newswire {
     }
 
     async updateRSS() {
-        console.log('[RSS] Updating RSS feed...');
+        // console.log('[RSS] Updating RSS feed...'); // Redundant with index.js log
         try {
             let res = await this.processRequest().catch(console.log);
 
@@ -281,9 +300,56 @@ class newswire {
             }
 
             fs.writeFileSync('feed.xml', feed.rss2());
-            console.log('[RSS] Feed updated successfully.');
+            //            console.log('[RSS] Feed updated successfully.');
+            // Instead of writing here, we return the feed object or articles
+            // But to keep it effectively reusable, let's just return the feed object.
+            // Actually, the index.js needs to merge items. So we should return the list of items with their content parsed.
+
+            // We need to return an array of items compatible with `feed.addItem`
+            const feedItems = [];
+            // Refactoring to for-of loop to support async operations
+            for (const post of articles) {
+                let imageUrl = "";
+                try {
+                    imageUrl = post.preview_images_parsed.newswire_block.d16x9;
+                } catch (e) { }
+
+                let link = 'https://www.rockstargames.com' + post.url;
+                let content = post.title; // Default fall back
+
+                try {
+                    const fullArticle = await this.getArticle(post.id);
+                    if (fullArticle) {
+                        content = this.parseContent(fullArticle);
+                    }
+                } catch (e) {
+                    console.error(`[RSS] Failed to fetch content for ${post.id}:`, e.message);
+                }
+
+                feedItems.push({
+                    title: post.title,
+                    id: post.id.toString(),
+                    link: link,
+                    description: post.title, // Description is often summary, but using title as fallback
+                    content: content,
+                    author: [
+                        {
+                            name: "Rockstar Games",
+                            link: "https://www.rockstargames.com"
+                        }
+                    ],
+                    date: new Date(post.created),
+                    image: imageUrl,
+                    // Additional metadata for multiple feeds if needed
+                    category: this.genre
+                });
+            }
+
+            return feedItems;
+
         } catch (e) {
-            console.error('[RSS] Failed to update feed:', e);
+            console.error('[RSS] Failed to fetch/parse feed data:', e);
+            return [];
         }
     }
 
@@ -468,8 +534,11 @@ function addArticle(article, url) {
     }
 }
 
+let tokenPromise = null;
 async function getHashToken() {
-    return new Promise(async (res, rej) => {
+    if (tokenPromise) return tokenPromise;
+    console.log('[INIT] Fetching API Token (this may take a minute)...');
+    tokenPromise = new Promise(async (res, rej) => {
         try {
             const browser = await puppeteer.launch({
                 headless: true
@@ -496,9 +565,32 @@ async function getHashToken() {
             });
             page.goto('https://www.rockstargames.com/newswire');
         } catch (e) {
+            tokenPromise = null; // Reset on failure so we can try again
             rej(e.stack);
         }
     });
+    return tokenPromise;
 };
 
-module.exports = newswire;
+// Also export setHashToken if we want to set it from outside, 
+// OR just rely on getHashToken being called externally and set internally?
+// The global `newsHash` is used in `processRequest`. 
+// We should probably allow setting it or just expose getHashToken and let the class use the global `newsHash` 
+// but wait, `processRequest` uses `newsHash` which is module-scoped. 
+// If we move `getHashToken` logic to index.js, we need a way to tell this module what the hash is.
+// OR we keep `getHashToken` here and just make it single-execution as done above.
+// But `newswire` instances need to know when `newsHash` is ready.
+
+// Let's modify the class to NOT fetch token itself in main(), but accept it or wait for it.
+// Actually, `main()` currently calls `getHashToken()`. 
+// Since `getHashToken` is now a singleton promise, multiple instances calling it will get the same promise.
+// So `newsHash = await getHashToken()` in `main()` is actually fine! 
+// The first one triggers it, others wait.
+// HOWEVER, `newsHash` is a module-level variable. 
+// If instance A sets it, instance B sets it same value. 
+// That's fine.
+
+module.exports = {
+    newswire,
+    getHashToken
+};

@@ -1,7 +1,8 @@
 const fs = require('fs');
 const http = require('http');
 const yaml = require('js-yaml');
-const newswire = require('./newswire');
+const { newswire } = require('./newswire');
+const { Feed } = require('feed');
 
 // Load Configuration
 let config;
@@ -26,33 +27,126 @@ if (config.enableDiscord && (!config.webhookUrl || config.webhookUrl === 'YOUR_W
 
 const genres = config.genres || ['latest'];
 const PORT = process.env.PORT || 3000;
-const FEED_FILE = 'feed.xml';
+// Default to merged if not specified
+const MERGE_FEEDS = config.mergeFeeds !== false;
+
+// Store articles for each genre: { genreName: [items] }
+const allArticles = {};
 
 // Start Newswire Instances
 console.log(`[INIT] Starting Rockstar Newswire Tracker...`);
 console.log(`[INIT] Enabled Genres: ${genres.join(', ')}`);
 console.log(`[INIT] Services: Discord=${config.enableDiscord}, RSS=${config.enableRSS}`);
+console.log(`[INIT] RSS Mode: ${MERGE_FEEDS ? 'Merged (feed.xml)' : 'Separate (feed-[genre].xml)'}`);
 
 genres.forEach(genre => {
     // We pass the config options to the class
     new newswire(genre, {
         webhookUrl: config.enableDiscord ? config.webhookUrl : null,
         enableRSS: config.enableRSS,
-        refreshInterval: (config.refreshInterval || 120) * 60 * 1000 // Convert minutes to ms
+        refreshInterval: (config.refreshInterval || 120) * 60 * 1000, // Convert minutes to ms
+        onRSSUpdate: (items) => {
+            console.log(`[RSS] Received ${items.length} articles for ${genre}`);
+            allArticles[genre] = items;
+            generateRSS();
+        }
     });
 });
+
+function generateRSS() {
+    if (MERGE_FEEDS) {
+        // Collect ALL items from all updated genres
+        let mergedItems = [];
+        Object.values(allArticles).forEach(items => {
+            mergedItems = mergedItems.concat(items);
+        });
+
+        // Sort by date descending
+        mergedItems.sort((a, b) => b.date - a.date);
+
+        const feed = createFeedObject("Rockstar Newswire (Merged)", "Latest news from Rockstar Games (All Genres)", "feed.xml");
+        mergedItems.forEach(item => feed.addItem(item));
+
+        try {
+            fs.writeFileSync('feed.xml', feed.rss2());
+            // console.log('[RSS] Merged feed.xml updated.');
+        } catch (e) {
+            console.error('[RSS] Failed to write feed.xml:', e);
+        }
+
+    } else {
+        // Generate separate feeds for each genre present in allArticles
+        Object.keys(allArticles).forEach(genre => {
+            const items = allArticles[genre];
+            const urlGenre = genre.replace(/_/g, '-');
+            const filename = `feed-${urlGenre}.xml`;
+            const feed = createFeedObject(`Rockstar Newswire (${genre})`, `Latest news for ${genre}`, filename);
+
+            items.forEach(item => feed.addItem(item));
+
+            try {
+                fs.writeFileSync(filename, feed.rss2());
+                // console.log(`[RSS] ${filename} updated.`);
+            } catch (e) {
+                console.error(`[RSS] Failed to write ${filename}:`, e);
+            }
+        });
+    }
+}
+
+function createFeedObject(title, description, linkPath) {
+    return new Feed({
+        title: title,
+        description: description,
+        id: "https://www.rockstargames.com/newswire",
+        link: "https://www.rockstargames.com/newswire",
+        language: "en",
+        image: "https://img.icons8.com/color/48/000000/rockstar-games.png",
+        favicon: "https://www.rockstargames.com/favicon.ico",
+        copyright: "All rights reserved by Rockstar Games",
+        updated: new Date(),
+        generator: "Rockstar Newswire RSS Generator",
+        author: {
+            name: "Rockstar Games",
+            link: "https://www.rockstargames.com"
+        }
+    });
+}
 
 // Start RSS Server if enabled
 if (config.enableRSS) {
     const server = http.createServer((req, res) => {
         console.log(`[SERVER] Request: ${req.method} ${req.url}`);
 
-        if (req.url === '/' || req.url === '/rss' || req.url === '/feed.xml') {
-            fs.readFile(FEED_FILE, (err, content) => {
+        // Routing
+        let targetFile = null;
+        if (MERGE_FEEDS) {
+            if (req.url === '/' || req.url === '/rss' || req.url === '/feed.xml') {
+                targetFile = 'feed.xml';
+            }
+        } else {
+            // Try to match /feed-[genre].xml
+            if (req.url.startsWith('/feed-') && req.url.endsWith('.xml')) {
+                targetFile = req.url.substring(1); // remove leading /
+            } else if (req.url === '/' || req.url === '/rss') {
+                // Index listing? Or just 404? 
+                // Let's list rockstar newswire available feeds
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                const links = Object.keys(allArticles).map(g => {
+                    const urlGenre = g.replace(/_/g, '-');
+                    return `<li><a href="/feed-${urlGenre}.xml">${g}</a></li>`;
+                }).join('');
+                res.end(`<h1>Rockstar Newswire RSS Feeds</h1><ul>${links}</ul>`);
+                return;
+            }
+        }
+
+        if (targetFile) {
+            fs.readFile(targetFile, (err, content) => {
                 if (err) {
                     if (err.code === 'ENOENT') {
                         res.writeHead(503, { 'Content-Type': 'text/plain' });
-                        res.end('Feed is initializing, please try again in a few seconds.');
+                        res.end('Feed is initializing or invalid genre, please try again.');
                     } else {
                         res.writeHead(500, { 'Content-Type': 'text/plain' });
                         res.end('Internal Server Error');
@@ -70,7 +164,15 @@ if (config.enableRSS) {
     });
 
     server.listen(PORT, () => {
-        console.log(`[SERVER] RSS Feed running at http://localhost:${PORT}/`);
+        if (MERGE_FEEDS) {
+            console.log(`[SERVER] RSS Feed running at http://localhost:${PORT}/feed.xml`);
+        } else {
+            console.log(`[SERVER] RSS Feeds available at:`);
+            console.log(`http://localhost:${PORT}/`); // Index page
+            genres.forEach(g => {
+                console.log(`http://localhost:${PORT}/feed-${g.replace(/_/g, '-')}.xml`);
+            });
+        }
     });
 } else {
     // If RSS is disabled, we might still want to keep the process alive if Discord is enabled
