@@ -21,14 +21,30 @@ The application is configured via `config.yaml`.
 5. Uncomment the **genres** (news categories) you want to track. By default, only `latest` is enabled.
 
 ### 2. Running with Docker (Recommended)
-Ensure you have Docker and Docker Compose installed.
+
+```yaml
+services:
+  rockstar-newswire-tracker:
+    image: nightmean/rockstar-newswire:latest
+    container_name: rockstar-newswire-tracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount config folder containing config.yaml and newswire.json
+      - ./config:/usr/src/app/config
+    environment:
+      - P_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+      - TZ=Europe/Bratislava
+```
+
+2. Run the container:
 
 ```bash
-# Build and start the container
 docker-compose up -d
 ```
 
-- The RSS feed will be available at:
   - **Merged Mode (Default)**: `http://<your-docker-host>:3000/feed.xml`
   - **Separate Mode**: `http://<your-docker-host>:3000/feed-[genre].xml` (e.g., `http://<your-docker-host>:3000/feed-gta-online.xml`)
 - Configuration (`config.yaml`) and data (`newswire.json`) are mounted as volumes, so you can edit config or check data without entering the container.
@@ -44,7 +60,7 @@ npm install
 node index.js
 ```
 
-## Configuration File (`config.yaml`)
+## Configuration file (`config.yaml`)
 ```yaml
 enableDiscord: true
 enableRSS: true
