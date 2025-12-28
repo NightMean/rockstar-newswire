@@ -1,6 +1,6 @@
 <!-- OPTION 1: Logo Above Text (Centered) -->
 <div align="center">
-  <img src="images/Github_Logo.png" width="130" alt="Rockstar Newswire Tracker Logo" />
+  <img src="images/Github_Logo.png" width="165" alt="Rockstar Newswire Tracker Logo" />
   <h1>Rockstar Newswire Tracker</h1>
 </div>
 
