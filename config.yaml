@@ -1,14 +1,14 @@
 # Rockstar Newswire Configuration
 
-# Discord Webhook URL
-# You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
-# If the environment variable is set, it will take precedence over this value.
-webhookUrl: "YOUR_WEBHOOK_URL_HERE"
-
 # Enable or Disable Services
 # Set to true or false to toggle functionality.
 enableDiscord: true # Post updates to Discord via Webhook
 enableRSS: true     # Generate RSS feed  (feed.xml)
+
+# Discord Webhook URL
+# You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
+# If the environment variable is set, it will take precedence over this value.
+webhookUrl: "YOUR_WEBHOOK_URL_HERE"
 
 # Refresh Interval 
 # Time in MINUTES (default: 120 = 2 hours)

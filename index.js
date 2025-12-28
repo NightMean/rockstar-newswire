@@ -20,7 +20,8 @@ if (process.env.DISCORD_WEBHOOK_URL) {
 
 // Validate Webhook for Discord
 if (config.enableDiscord && (!config.webhookUrl || config.webhookUrl === 'YOUR_WEBHOOK_URL_HERE')) {
-    console.warn('[WARN] Discord is enabled but Webhook URL is not configured. Discord posts will be skipped.');
+    console.error('[ERROR] Discord is enabled but Webhook URL is not configured. Please check config.yaml or set DISCORD_WEBHOOK_URL env variable.');
+    process.exit(1);
 }
 
 const genres = config.genres || ['latest'];
