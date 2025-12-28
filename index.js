@@ -2,7 +2,7 @@ const fs = require('fs');
 const http = require('http');
 const yaml = require('js-yaml');
 const { newswire } = require('./src/newswire');
-const { Feed } = require('feed');
+// const { Feed } = require('feed'); // Replaced with dynamic import
 
 // Load Configuration
 let config;
@@ -58,7 +58,7 @@ genres.forEach(genre => {
     });
 });
 
-function generateRSS() {
+async function generateRSS() {
     if (MERGE_FEEDS) {
         // Collect ALL items from all updated genres
         let mergedItems = [];
@@ -69,7 +69,7 @@ function generateRSS() {
         // Sort by date descending
         mergedItems.sort((a, b) => b.date - a.date);
 
-        const feed = createFeedObject("Rockstar Newswire (Merged)", "Latest news from Rockstar Games (All Genres)", "feed.xml");
+        const feed = await createFeedObject("Rockstar Newswire (Merged)", "Latest news from Rockstar Games (All Genres)", "feed.xml");
         mergedItems.forEach(item => feed.addItem(item));
 
         try {
@@ -81,11 +81,12 @@ function generateRSS() {
 
     } else {
         // Generate separate feeds for each genre present in allArticles
-        Object.keys(allArticles).forEach(genre => {
+        // We need to use for...of to await async creation
+        for (const genre of Object.keys(allArticles)) {
             const items = allArticles[genre];
             const urlGenre = genre.replace(/_/g, '-');
             const filename = `feed-${urlGenre}.xml`;
-            const feed = createFeedObject(`Rockstar Newswire (${genre})`, `Latest news for ${genre}`, filename);
+            const feed = await createFeedObject(`Rockstar Newswire (${genre})`, `Latest news for ${genre}`, filename);
 
             items.forEach(item => feed.addItem(item));
 
@@ -95,11 +96,12 @@ function generateRSS() {
             } catch (e) {
                 console.error(`[RSS] Failed to write ./feeds/${filename}:`, e);
             }
-        });
+        }
     }
 }
 
-function createFeedObject(title, description, linkPath) {
+async function createFeedObject(title, description, linkPath) {
+    const { Feed } = await import('feed');
     return new Feed({
         title: title,
         description: description,
@@ -117,6 +119,8 @@ function createFeedObject(title, description, linkPath) {
         }
     });
 }
+
+// function createFeedObject removed (was duplicate)
 
 // Start RSS Server if enabled
 if (config.enableRSS) {

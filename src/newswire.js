@@ -40,7 +40,7 @@ const {
     request
 } = require('https');
 const fs = require('fs');
-const { Feed } = require('feed');
+// const { Feed } = require('feed'); // Replaced with dynamic import
 const path = require('path');
 const newsDir = path.join(__dirname, '../config/newswire_articles.json');
 const mainLink = 'https://graph.rockstargames.com?';
@@ -288,6 +288,7 @@ class newswire {
             }
 
             const articles = res.data.posts.results;
+            const { Feed } = await import('feed');
             const feed = new Feed({
                 title: "Rockstar Newswire (" + this.genre + ")",
                 description: "Latest news from Rockstar Games for " + this.genre,
@@ -596,7 +597,8 @@ async function getHashToken() {
     tokenPromise = new Promise(async (res, rej) => {
         try {
             const browser = await puppeteer.launch({
-                headless: true
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             const page = await browser.newPage();
             await page.setRequestInterception(true);
