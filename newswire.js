@@ -16,6 +16,7 @@ const {
     request
 } = require('https');
 const fs = require('fs');
+const { Feed } = require('feed');
 const newsDir = './newswire.json';
 const mainLink = 'https://graph.rockstargames.com?';
 const refreshInterval = 7.2e+6; // 2 hours in milliseconds. If you would like to change it (http://www.unitconversion.org/time/seconds-to-milliseconds-conversion.html)
@@ -45,18 +46,25 @@ class newswire {
         let article;
         console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every 2 hours.');
         newsHash = await getHashToken();
+        
+        await this.updateRSS();
+
         article = await this.getNewArticle();
         if (!(article instanceof TypeError) && article.title) {
             this.sendArticle(article)
         }
         setInterval(async _ => {
             console.log('[REFRESH] Refreshing news feed for ' + this.genre);
+            
+            await this.updateRSS();
+
             article = await this.getNewArticle();
             !(article instanceof TypeError) && article.title ? this.sendArticle(article) : console.log(article.message);
         }, refreshInterval);
     }
 
     sendArticle(article) {
+        if (!this.webhook) return;
         console.log(`[NEW] ${this.genre}: ${article.title} (${article.link})`);
         article.tags = '' + article.tags.map(tag => '`' + tag + '` ');
         const embed = {
@@ -128,6 +136,74 @@ class newswire {
                 return new TypeError('[CHECK] No new articles found for ' + this.genre)
             }
         }).catch(console.log);
+    }
+
+    async updateRSS() {
+        console.log('[RSS] Updating RSS feed...');
+        try {
+            let res = await this.processRequest().catch(console.log);
+            
+            if (res && res.errors != null) {
+                if (res.data == null && res.errors[0].message == 'PersistedQueryNotFound') {
+                    console.log('[RSS] Token has expired, generating new one.');
+                    newsHash = await getHashToken().catch(console.log);
+                    res = await this.processRequest().catch(console.log);
+                }
+            }
+
+            if (!res || !res.data || !res.data.posts) {
+                console.log('[RSS] No data received.');
+                return;
+            }
+
+            const articles = res.data.posts.results;
+            const feed = new Feed({
+                title: "Rockstar Newswire (" + this.genre + ")",
+                description: "Latest news from Rockstar Games for " + this.genre,
+                id: "https://www.rockstargames.com/newswire",
+                link: "https://www.rockstargames.com/newswire",
+                language: "en",
+                image: "https://img.icons8.com/color/48/000000/rockstar-games.png",
+                favicon: "https://www.rockstargames.com/favicon.ico",
+                copyright: "All rights reserved by Rockstar Games",
+                updated: new Date(),
+                generator: "Rockstar Newswire RSS Generator",
+                author: {
+                    name: "Rockstar Games",
+                    link: "https://www.rockstargames.com"
+                }
+            });
+
+            articles.forEach(post => {
+                let imageUrl = "";
+                try {
+                    imageUrl = post.preview_images_parsed.newswire_block.d16x9;
+                } catch (e) {}
+                
+                let link = 'https://www.rockstargames.com' + post.url;
+
+                feed.addItem({
+                    title: post.title,
+                    id: post.id.toString(),
+                    link: link,
+                    description: post.title,
+                    content: post.title,
+                    author: [
+                        {
+                            name: "Rockstar Games",
+                            link: "https://www.rockstargames.com"
+                        }
+                    ],
+                    date: new Date(post.created),
+                    image: imageUrl
+                });
+            });
+
+            fs.writeFileSync('feed.xml', feed.rss2());
+            console.log('[RSS] Feed updated successfully.');
+        } catch (e) {
+            console.error('[RSS] Failed to update feed:', e);
+        }
     }
 
     async processRequest() {
