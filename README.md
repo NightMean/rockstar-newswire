@@ -59,6 +59,13 @@ Currently supports discord [webhooks](https://support.discordapp.com/hc/en-us/ar
 ## Demo
 ![](./demo.png "Example of news feed.")
 
+## RSS Feed
+To run a local server to serve the generated RSS feed:
+1. Run `node server.js` to start the server.
+2. The server will start on port 3000 (default).
+3. Access the feed at `http://localhost:3000/rss` (or `/feed.xml`).
+The feed is automatically updated every 2 hours (default refresh interval).
+
 ## Credits
 - Rockstar [newswire](https://www.rockstargames.com/newswire).
 - [puppeteer](https://www.npmjs.com/package/puppeteer) for their virtual browser network tracing.
