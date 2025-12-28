@@ -1,3 +1,6 @@
-# Node.js Stuff
+# Node.js modules
 node_modules
+
+# Generated files
 feed.xml
+newswire.json

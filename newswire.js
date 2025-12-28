@@ -41,7 +41,8 @@ const {
 } = require('https');
 const fs = require('fs');
 const { Feed } = require('feed');
-const newsDir = './newswire.json';
+const path = require('path');
+const newsDir = path.join(__dirname, 'newswire.json');
 const mainLink = 'https://graph.rockstargames.com?';
 const refreshInterval = 7.2e+6; // 2 hours in milliseconds. If you would like to change it (http://www.unitconversion.org/time/seconds-to-milliseconds-conversion.html)
 const requestOptions = {
@@ -49,12 +50,30 @@ const requestOptions = {
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 1000,
+    timeout: 30000,
 };
 let articles, newsHash;
 
-fs.readFile(newsDir, 'utf8', (err, jsonString) => {
-    articles = jsonString ? JSON.parse(jsonString) : {};
+const articlesLoaded = new Promise((resolve, reject) => {
+    fs.readFile(newsDir, 'utf8', (err, jsonString) => {
+        if (err) {
+            if (err.code === 'ENOENT') {
+                articles = {};
+            } else {
+                console.error('[ERROR] Failed to read articles file:', err);
+                articles = {};
+            }
+        } else {
+            try {
+                articles = jsonString ? JSON.parse(jsonString) : {};
+            } catch (e) {
+                console.error('[ERROR] Failed to parse articles JSON (First 50 chars):', jsonString.substring(0, 50));
+                console.error('[ERROR] Parse error:', e);
+                articles = {};
+            }
+        }
+        resolve(articles);
+    });
 });
 
 class newswire {
@@ -72,8 +91,12 @@ class newswire {
     }
 
     async main() {
+        // Ensure data is loaded before starting
+        await articlesLoaded;
+
         let article;
-        console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every 2 hours.');
+        console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every ' + (this.refreshInterval / 60000) + ' minutes.');
+        console.log('[INIT] Fetching API Token (this may take a minute)...');
         newsHash = await getHashToken();
 
         if (this.enableRSS) await this.updateRSS();
@@ -95,31 +118,36 @@ class newswire {
     sendArticle(article) {
         if (!this.webhook) return;
         console.log(`[NEW] ${this.genre}: ${article.title} (${article.link})`);
-        article.tags = '' + article.tags.map(tag => '`' + tag + '` ');
+        article.tags = article.tags.join(', ');
         const embed = {
             'embeds': [{
                 'author': {
-                    'name': 'Newswire',
+                    'name': 'Rockstar Newswire',
                     'url': 'https://www.rockstargames.com/newswire',
-                    'icon_url': 'https://img.icons8.com/color/48/000000/rockstar-games.png'
+                    'icon_url': 'https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj'
                 },
                 'title': article.title,
                 'url': article.link,
                 'description': article.tags,
-                'color': 15258703,
+                'color': 16756992,
                 'fields': [],
                 'image': {
                     'url': article.img
                 },
                 'footer': {
-                    "icon_url": "https://img.icons8.com/color/48/000000/rockstar-games.png",
-                    "text": article.date
+                    "icon_url": "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj",
+                    "text": article.tags + ' | ' + article.date
                 }
             }]
         };
         const req = request(this.webhook, requestOptions, (res) => {
-            if (res.statusCode < 200 || res.statusCode > 299)
+            if (res.statusCode < 200 || res.statusCode > 299) {
                 console.error('[ERROR] Unable to process request: ' + res.statusCode + '\nReason: ' + res.statusMessage);
+            } else {
+                console.log('[DISCORD] Notification sent successfully.');
+            }
+            // Vital: Consume response data to free up memory and prevent timeout
+            res.resume();
         });
         req.on('error', (err) => {
             console.error(err);
@@ -429,9 +457,11 @@ function addArticle(article, url) {
     if (articles) {
         if (!articles[article]) {
             articles[article] = url;
-            fs.writeFile(newsDir, JSON.stringify(articles, null, 2), (err) => {
-                if (err) console.error('[ERROR] Failed to save articles to db due ' + err);
-            });
+            try {
+                fs.writeFileSync(newsDir, JSON.stringify(articles, null, 2));
+            } catch (err) {
+                console.error('[ERROR] Failed to save articles to db:', err);
+            }
         } else {
             console.log('Article ID: ' + article + ' already exists in database.');
         }
