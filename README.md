@@ -1,7 +1,7 @@
 # rockstar-newswire
-A lightweight Rockstar [newswire](https://www.rockstargames.com/newswire) tracker to bring latest news to your platform.
+A lightweight Rockstar [newswire](https://www.rockstargames.com/newswire) tracker to bring latest news to your Discord channel or RSS feed.
 
-Currently supports discord [webhooks](https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and you can easily change it to return URL for to be used on any other platform.
+Currently supports discord [webhooks](https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and RSS feed. (you can easily change it to return URL for to be used on any other platform)
 
 ## Install
 - Install the required Node packages via `npm i` or `yarn install`
@@ -50,21 +50,22 @@ Currently supports discord [webhooks](https://support.discordapp.com/hc/en-us/ar
 - `red_dead_redemption` (Red Dead Redemption news)
 - `red_dead_redemption_2` (Red Dead Redemption 2 general news)
 
-## Notes
+## Notes for Discord
 - You require discord [webhook URL](https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
 - Feed refreshes every 2 hours to make sure its up-to-date. If you would like to change it then you're required to change this [variable](https://github.com/Carbowix/rockstar-newswire/blob/master/newswire.js#L18) using that time [converter](http://www.unitconversion.org/time/seconds-to-milliseconds-conversion.html). It has to be in **milliseconds** in order to operate properly.
 - It's recommened to take `newsdb.json` with you if you're porting the project to another host to prevent redundant news posts.
 - It is not guranteed that it can trace multiple new news posts of the same type since it only traces the last post posted. In-order to avoid such error, you can lower the news feed refresh rate as specified previously. If you have a idea on how to improve it then feel free to contribute.
 - This is a small research project and it's not meant to be used as a network harm tool.
-## Demo
-![](./demo.png "Example of news feed.")
 
-## RSS Feed
+## Notes for RSS Feed
 To run a local server to serve the generated RSS feed:
 1. Run `node server.js` to start the server.
 2. The server will start on port 3000 (default).
 3. Access the feed at `http://localhost:3000/rss` (or `/feed.xml`).
 The feed is automatically updated every 2 hours (default refresh interval).
+
+## Demo
+![](./demo.png "Example of news feed.")
 
 ## Credits
 - Rockstar [newswire](https://www.rockstargames.com/newswire).
