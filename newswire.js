@@ -12,6 +12,7 @@ const genres = {
 	contest: 161,
 	crews: 621,
 	crews_recruiting: 725,
+	gameplay_clips: 727,
     events: 13,
 	crews: 621,
 	music: 30,
