@@ -42,6 +42,9 @@ services:
       - P_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
       - TZ=Europe/Bratislava
+      # Optional: Override the webhook URL from config.yaml.
+      # If not set here, it uses the value from ./config/config.yaml
+      # - DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
 2. Run the container:
