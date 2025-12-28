@@ -272,6 +272,13 @@ class newswire {
         if (!post.tina || !post.tina.payload || !post.tina.payload.content) return post.title;
 
         const imgBase = "https://media-rockstargames-com.akamaized.net";
+        let autoHtml = "";
+
+        // Add Subtitle
+        const subtitle = post.subtitle || (post.tina.payload.meta && post.tina.payload.meta.subtitle);
+        if (subtitle) {
+            autoHtml += `<h3><strong>${subtitle}</strong></h3><br/>`;
+        }
 
         const traverse = (node) => {
             if (!node) return "";
@@ -345,8 +352,8 @@ class newswire {
             return "";
         };
 
-        const fullHtml = traverse(post.tina.payload.content);
-        return fullHtml || post.title;
+        const contentHtml = traverse(post.tina.payload.content);
+        return (autoHtml + contentHtml) || post.title;
     }
 
     async processRequest() {
