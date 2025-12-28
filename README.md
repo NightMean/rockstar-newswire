@@ -1,21 +1,55 @@
-# rockstar-newswire
-A lightweight Rockstar [newswire](https://www.rockstargames.com/newswire) tracker to bring latest news to your Discord channel or RSS feed.
+# Rockstar Newswire Tracker
 
-Currently supports discord [webhooks](https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and RSS feed. (you can easily change it to return URL for to be used on any other platform)
+A lightweight, powerful tool to track the latest [Rockstar Games Newswire](https://www.rockstargames.com/newswire) updates. Automatically post news to your Discord server via Webhooks or serve a local RSS feed.
 
-## Install
-- Install the required Node packages via `npm i` or `yarn install`
+## Features
+- **Discord Integration**: Seamlessly post new articles to your Discord channel.
+- **RSS Feed**: Generates a strictly typed RSS 2.0 feed (`feed.xml`) for use with any RSS reader.
+- **Multiple Categories**: specialized tracking for specific games like **GTA Online**, **Red Dead Online**, or general **Rockstar Announcements**.
+- **Auto-Refresh**: Automatically polls for new content every 2 hours (configurable).
 
-## API
+## Installation
+Ensure you have [Node.js](https://nodejs.org/) installed.
 
-```js
-    let newswire = require('./newswire');
-    let latestNews = new newswire(type, webhookURL);
-    // Available Types: rdr2, gtav, latest, music, fanart, fanvideos, creator, tips, rockstar, updates,
-    // Webhook URL: https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
-    // News should automatically post and update every 2 hours.
+```bash
+npm install
+# or
+yarn install
 ```
-### Available types
+
+## Usage
+
+### 1. Discord Webhook Integration
+To start tracking news and posting to Discord:
+
+1. Create a [Webhook](https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks) in your Discord channel.
+2. Configure `newswire.js` script for `genre` and `webhookUrl` according to your needs. 
+
+```javascript
+// Configuration
+const genre = 'latest'; // See 'Supported Newswire Categories' below
+const webhookUrl = 'YOUR_WEBHOOK_URL_HERE';
+```
+
+### 2. RSS Feed Server
+To run a local RSS feed server:
+
+1. Run the server:
+   ```bash
+   node server.js
+   ```
+2. The server will start on port `3000` by default.
+3. Access the feed at:
+   - `http://localhost:3000/rss`
+   - `http://localhost:3000/feed.xml`
+
+## Configuration
+- **Refresh Interval**: The feed updates every 2 hours (7,200,000 ms) by default. To change this, modify the `refreshInterval` variable in `newswire.js`.
+- **Data Persistence**: The script uses `newswire.json` to track posted articles and prevent duplicates. If you move the bot, make sure to move this file as well.
+
+## Supported News Types (Genres)
+Pass one of these keys as the `genre` argument:
+
 - `latest` (Latest news from any type that shows on newswire homepage)
 - `announcements` (General Rockstar announcements)
 - `updates` (Any released game updates)
@@ -50,23 +84,20 @@ Currently supports discord [webhooks](https://support.discordapp.com/hc/en-us/ar
 - `red_dead_redemption` (Red Dead Redemption news)
 - `red_dead_redemption_2` (Red Dead Redemption 2 general news)
 
-## Notes for Discord
-- You require discord [webhook URL](https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
-- Feed refreshes every 2 hours to make sure its up-to-date. If you would like to change it then you're required to change this [variable](https://github.com/Carbowix/rockstar-newswire/blob/master/newswire.js#L18) using that time [converter](http://www.unitconversion.org/time/seconds-to-milliseconds-conversion.html). It has to be in **milliseconds** in order to operate properly.
-- It's recommened to take `newsdb.json` with you if you're porting the project to another host to prevent redundant news posts.
-- It is not guranteed that it can trace multiple new news posts of the same type since it only traces the last post posted. In-order to avoid such error, you can lower the news feed refresh rate as specified previously. If you have a idea on how to improve it then feel free to contribute.
-- This is a small research project and it's not meant to be used as a network harm tool.
+## API Reference
+For developers who want to integrate the newswire into their own applications:
 
-## Notes for RSS Feed
-To run a local server to serve the generated RSS feed:
-1. Run `node server.js` to start the server.
-2. The server will start on port 3000 (default).
-3. Access the feed at `http://localhost:3000/rss` (or `/feed.xml`).
-The feed is automatically updated every 2 hours (default refresh interval).
+```javascript
+/* 
+    Usage: new newswire(genre, webhookUrl);
+    genre: String (One of the supported categories)
+    webhookUrl: String (Discord Webhook URL, or null if using only RSS)
+*/
 
-## Demo
-![](./demo.png "Example of news feed.")
+const newswire = require('rockstar-newswire');
+const tracker = new newswire('gta_online', 'https://discord.com/api/webhooks/...');
+```
 
 ## Credits
-- Rockstar [newswire](https://www.rockstargames.com/newswire).
-- [puppeteer](https://www.npmjs.com/package/puppeteer) for their virtual browser network tracing.
+- [Rockstar Games Newswire](https://www.rockstargames.com/newswire)
+- [Puppeteer](https://www.npmjs.com/package/puppeteer) (Virtual browser for network tracing)
