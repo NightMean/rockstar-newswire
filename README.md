@@ -48,7 +48,7 @@ node index.js
 ```yaml
 enableDiscord: true
 enableRSS: true
-mergeFeeds: true # true = one feed.xml; false = feed-genre.xml
+mergeFeeds: false # true = one feed.xml; false = feed-genre.xml
 
 # Discord Settings
 webhookUrl: "YOUR_WEBHOOK_URL_HERE"
@@ -56,6 +56,7 @@ discordProfileName: "Rockstar Newswire Tracker"
 discordAvatarUrl: "https://..."
 dateFormat: "DD/MM/YYYY"
 
+checkLimit: 5 # Check latest 5 articles per refresh
 refreshInterval: 120 # Minutes
 genres:
   - latest
@@ -73,10 +74,10 @@ See `config.yaml` for the full list of supported genres. You can uncomment any g
 - ... and many others.
 
 ## Discord notification
-![Discord notification demo](discord_demo.png)
+![Discord notification demo](images/demo_discord.png)
 
 ## RSS feed (from FreshRSS)
-![RSS feed demo](rss_demo.png)
+![RSS feed demo](images/demo_rss.png)
 
 ## API Reference
 For developers who want to integrate the newswire into their own applications:
@@ -91,7 +92,8 @@ For developers who want to integrate the newswire into their own applications:
         refreshInterval (ms),
         discordProfileName (string),
         discordAvatarUrl (string),
-        dateFormat (string)
+        dateFormat (string),
+        checkLimit (number)
     }
 */
 
@@ -101,7 +103,8 @@ const tracker = new newswire('gta_online', {
     enableRSS: true,
     refreshInterval: 7200000,
     discordProfileName: 'My Tracker', // Optional
-    dateFormat: 'DD/MM/YYYY' // Optional
+    dateFormat: 'DD/MM/YYYY', // Optional
+    checkLimit: 5 // Optional (Default: 5, Min: 1)
 });
 ```
 

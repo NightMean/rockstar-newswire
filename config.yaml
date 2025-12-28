@@ -4,7 +4,7 @@
 # Set to true or false to toggle functionality.
 enableDiscord: true # Post updates to Discord via Webhook
 enableRSS: true     # Generate RSS feed  (feed.xml)
-mergeFeeds: false    # If true, all enabled genres are merged into one feed.xml. If false, separate feed-[genre].xml files are created.
+mergeFeeds: true    # If true, all enabled genres are merged into one feed.xml. If false, separate feed-[genre].xml files are created.
 
 # Discord Configuration
 # You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
@@ -19,6 +19,10 @@ discordAvatarUrl: "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSO
 # Options: "DD/MM/YYYY" or "MM/DD/YYYY"
 dateFormat: "DD/MM/YYYY"
 
+# Number of recent articles to check for updates.
+# Default is 5. Minimum is 1.
+checkLimit: 3
+
 # Refresh Interval 
 # Time in MINUTES (default: 120 = 2 hours)
 # Examples: 
@@ -30,10 +34,7 @@ refreshInterval: 120
 # Uncomment the categories you want to track.
 # NOTE: By default, only 'latest' is enabled. To enable specific categories, remove the '#' at the start of the line.
 
-# === Default ===
 genres:
-  - red_dead_online
-  - circoloco_records
   - latest
 
 # === Other Categories (Uncomment to enable) ===

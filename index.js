@@ -1,7 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const yaml = require('js-yaml');
-const { newswire } = require('./newswire');
+const { newswire } = require('./src/newswire');
 const { Feed } = require('feed');
 
 // Load Configuration
@@ -49,6 +49,7 @@ genres.forEach(genre => {
         discordProfileName: config.discordProfileName || "Rockstar Newswire Tracker",
         discordAvatarUrl: config.discordAvatarUrl || "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj",
         dateFormat: config.dateFormat || "DD/MM/YYYY",
+        checkLimit: Math.max(1, config.checkLimit || 5), // Default 5, Min 1
         onRSSUpdate: (items) => {
             console.log(`[RSS] Received ${items.length} articles for ${genre}`);
             allArticles[genre] = items;
@@ -72,10 +73,10 @@ function generateRSS() {
         mergedItems.forEach(item => feed.addItem(item));
 
         try {
-            fs.writeFileSync('feed.xml', feed.rss2());
+            fs.writeFileSync('./feeds/feed.xml', feed.rss2());
             // console.log('[RSS] Merged feed.xml updated.');
         } catch (e) {
-            console.error('[RSS] Failed to write feed.xml:', e);
+            console.error('[RSS] Failed to write ./feeds/feed.xml:', e);
         }
 
     } else {
@@ -89,10 +90,10 @@ function generateRSS() {
             items.forEach(item => feed.addItem(item));
 
             try {
-                fs.writeFileSync(filename, feed.rss2());
+                fs.writeFileSync(`./feeds/${filename}`, feed.rss2());
                 // console.log(`[RSS] ${filename} updated.`);
             } catch (e) {
-                console.error(`[RSS] Failed to write ${filename}:`, e);
+                console.error(`[RSS] Failed to write ./feeds/${filename}:`, e);
             }
         });
     }
@@ -146,7 +147,7 @@ if (config.enableRSS) {
         }
 
         if (targetFile) {
-            fs.readFile(targetFile, (err, content) => {
+            fs.readFile(`./feeds/${targetFile}`, (err, content) => {
                 if (err) {
                     if (err.code === 'ENOENT') {
                         res.writeHead(503, { 'Content-Type': 'text/plain' });
