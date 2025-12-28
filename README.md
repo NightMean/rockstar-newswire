@@ -1,4 +1,9 @@
-# Rockstar Newswire Tracker
+<!-- OPTION 1: Logo Above Text (Centered) -->
+<div align="center">
+  <img src="images/Github_Logo.png" width="130" alt="Rockstar Newswire Tracker Logo" />
+  <h1>Rockstar Newswire Tracker</h1>
+</div>
+
 
 A lightweight, customizable, powerful tool to track the latest [Rockstar Games Newswire](https://www.rockstargames.com/newswire) updates. Automatically post news to your Discord server via Webhooks or serve a local RSS feed.
 
