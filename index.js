@@ -7,7 +7,7 @@ const { Feed } = require('feed');
 // Load Configuration
 let config;
 try {
-    const fileContents = fs.readFileSync('./config.yaml', 'utf8');
+    const fileContents = fs.readFileSync('./config/config.yaml', 'utf8');
     config = yaml.load(fileContents);
 } catch (e) {
     console.error('[ERROR] Failed to load config.yaml:', e);

@@ -42,7 +42,7 @@ const {
 const fs = require('fs');
 const { Feed } = require('feed');
 const path = require('path');
-const newsDir = path.join(__dirname, '../newswire.json');
+const newsDir = path.join(__dirname, '../config/newswire_articles.json');
 const mainLink = 'https://graph.rockstargames.com?';
 const refreshInterval = 7.2e+6; // 2 hours in milliseconds. If you would like to change it (http://www.unitconversion.org/time/seconds-to-milliseconds-conversion.html)
 const requestOptions = {

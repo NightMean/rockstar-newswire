@@ -4,19 +4,16 @@ services:
   rockstar-newswire-tracker:
     build: .
     image: rockstar-newswire
-    container_name: rockstar-newswire
+    container_name: rockstar-newswire-tracker
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      # Mount config file so user can edit it on host
-      - ./config.yaml:/usr/src/app/config.yaml
-      # Mount data file (newswire.json) to persist state across restarts
-      - ./newswire.json:/usr/src/app/newswire.json
-      # Mount feed.xml so it is accessible on host if needed (optional)
-      - ./feed.xml:/usr/src/app/feed.xml
+      # Mount config folder containing config.yaml and newswire.json
+      - ./config:/usr/src/app/config
     environment:
       # Set to true to skip chromium download if we used installed chrome, 
       # but we let puppeteer manage it in Dockerfile for fewer headaches with version mismatch.
-      - NODE_ENV=production
-      # - DISCORD_WEBHOOK_URL=your_webhook_url_here
+      - P_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+      - TZ=Europe/Bratislava

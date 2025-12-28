@@ -3,4 +3,4 @@ node_modules
 
 # Generated files
 feeds/
-newswire.json
+config/newswire_articles.json

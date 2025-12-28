@@ -29,8 +29,8 @@ docker-compose up -d
 ```
 
 - The RSS feed will be available at:
-  - **Merged Mode (Default)**: `http://localhost:3000/feed.xml`
-  - **Separate Mode**: `http://localhost:3000/feed-[genre].xml` (e.g., `feed-gta-online.xml`)
+  - **Merged Mode (Default)**: `http://<your-docker-host>:3000/feed.xml`
+  - **Separate Mode**: `http://<your-docker-host>:3000/feed-[genre].xml` (e.g., `http://<your-docker-host>:3000/feed-gta-online.xml`)
 - Configuration (`config.yaml`) and data (`newswire.json`) are mounted as volumes, so you can edit config or check data without entering the container.
 
 ### 3. Running Locally (Node.js)
