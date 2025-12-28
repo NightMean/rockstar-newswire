@@ -37,7 +37,7 @@ genres.forEach(genre => {
     new newswire(genre, {
         webhookUrl: config.enableDiscord ? config.webhookUrl : null,
         enableRSS: config.enableRSS,
-        refreshInterval: config.refreshInterval
+        refreshInterval: (config.refreshInterval || 120) * 60 * 1000 // Convert minutes to ms
     });
 });
 

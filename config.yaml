@@ -11,8 +11,11 @@ enableDiscord: true # Post updates to Discord via Webhook
 enableRSS: true     # Generate RSS feed  (feed.xml)
 
 # Refresh Interval 
-# Time in milliseconds (default: 7200000 = 2 hours)
-refreshInterval: 7200000
+# Time in MINUTES (default: 120 = 2 hours)
+# Examples: 
+#   60  = 1 hour
+#   1440 = 1 day
+refreshInterval: 120
 
 # News Types (Genres)
 # Uncomment the categories you want to track.

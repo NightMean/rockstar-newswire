@@ -44,7 +44,9 @@ To run a local RSS feed server:
    - `http://localhost:3000/feed.xml`
 
 ## Configuration
-- **Refresh Interval**: The feed updates every 2 hours (7,200,000 ms) by default. To change this, modify the `refreshInterval` variable in `newswire.js`.
+- **Refresh Interval**: The feed updates every 120 minutes (2 hours) by default. To change this, modify the `refreshInterval` variable in `config.yaml`.
+  - 60 = 1 hour
+  - 1440 = 1 day
 - **Data Persistence**: The script uses `newswire.json` to track posted articles and prevent duplicates. If you move the bot, make sure to move this file as well.
 
 ## Supported News Types (Genres)
