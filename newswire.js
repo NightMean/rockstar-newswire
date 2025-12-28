@@ -168,7 +168,6 @@ class newswire {
                     'url': article.img
                 },
                 'footer': {
-                    "icon_url": "https://yt3.googleusercontent.com/-jCZaDR8AoEgC6CBPWFubF2PMSOTGU3nJ4VOSo7aq3W6mR8tcRCgygd8fS-4Ra41oHPo3F3P=s900-c-k-c0x00ffffff-no-rj",
                     "text": article.tags + ' • ' + dateStr
                 }
             }]
