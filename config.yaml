@@ -1,0 +1,57 @@
+# Rockstar Newswire Configuration
+
+# Discord Webhook URL
+# You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
+# If the environment variable is set, it will take precedence over this value.
+webhookUrl: "YOUR_WEBHOOK_URL_HERE"
+
+# Enable or Disable Services
+# Set to true or false to toggle functionality.
+enableDiscord: true # Post updates to Discord via Webhook
+enableRSS: true     # Generate RSS feed  (feed.xml)
+
+# Refresh Interval 
+# Time in milliseconds (default: 7200000 = 2 hours)
+refreshInterval: 7200000
+
+# News Types (Genres)
+# Uncomment the categories you want to track.
+# NOTE: By default, only 'latest' is enabled. To enable specific categories, remove the '#' at the start of the line.
+
+# === Default ===
+genres:
+  - latest
+
+# === Other Categories (Uncomment to enable) ===
+#  - announcements
+#  - updates
+#  - rockstar
+#  - backward_compatibility
+#  - circoloco_records
+#  - content_updates
+#  - contest
+#  - creator_jobs
+#  - crews
+#  - crews_recruiting
+#  - gameplay_clips
+#  - events
+#  - fan_art
+#  - fan_videos
+#  - game_tips
+#  - music
+#  - livestream
+#  - rockstar_launcher
+#  - sales
+#  - twitch
+#  - warehouse
+#  - in_memoriam
+#  - grand_theft_auto_the_trilogy
+#  - grand_theft_auto_v
+#  - grand_theft_auto_vi
+#  - gta_online
+#  - la_noire
+#  - max_payne
+#  - max_payne_3
+#  - red_dead_online
+#  - red_dead_redemption
+#  - red_dead_redemption_2

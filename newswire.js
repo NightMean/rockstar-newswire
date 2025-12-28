@@ -1,39 +1,39 @@
 const genres = {
     latest: null,
     announcements: 722,
-	content_updates: 705,
-	backward_compatibility: 735,
-	rockstar_launcher: 739,
-	fan_videos: 706,
-	livestream: 711,
-	in_memoriam: 730,
-	twitch: 712,
-	warehouse: 191,
-	contest: 161,
-	crews: 621,
-	crews_recruiting: 725,
-	gameplay_clips: 727,
+    content_updates: 705,
+    backward_compatibility: 735,
+    rockstar_launcher: 739,
+    fan_videos: 706,
+    livestream: 711,
+    in_memoriam: 730,
+    twitch: 712,
+    warehouse: 191,
+    contest: 161,
+    crews: 621,
+    crews_recruiting: 725,
+    gameplay_clips: 727,
     events: 13,
-	crews: 621,
-	music: 30,
+    crews: 621,
+    music: 30,
     rockstar: 43,
-	sales: 661,
+    sales: 661,
     game_tips: 121,
-	max_payne: 25,
-	max_payne_3: 27,
+    max_payne: 25,
+    max_payne_3: 27,
     grand_theft_auto_vi: 666,
     gta_online: 702,
-	grand_theft_auto_v: 591,
-	grand_theft_auto_the_trilogy: 751,
+    grand_theft_auto_v: 591,
+    grand_theft_auto_the_trilogy: 751,
     updates: 705,
     fan_videos: 706,
     fan_art: 708,
     creator_jobs: 728,
     red_dead_online: 736,
-	red_dead_redemption_2: 716,
-	red_dead_redemption: 40,
-	la_noire: 86,
-	circoloco_records: 1005,
+    red_dead_redemption_2: 716,
+    red_dead_redemption: 40,
+    la_noire: 86,
+    circoloco_records: 1005,
 };
 const puppeteer = require('puppeteer');
 const {
@@ -58,11 +58,16 @@ fs.readFile(newsDir, 'utf8', (err, jsonString) => {
 });
 
 class newswire {
-    constructor(genre, webhook) {
+    constructor(genre, options) {
         if (typeof genres[genre] == 'undefined') return console.log('Invalid genre. Available genres:' + Object.keys(genres).map(gen => ' ' + gen));
         this.genre = genre;
         this.genreID = genres[genre];
-        this.webhook = webhook;
+        this.webhook = options.webhookUrl;
+        this.enableRSS = options.enableRSS;
+        this.refreshInterval = options.refreshInterval || 7.2e+6;
+
+        // Remove direct main() call from constructor to allow async/better flow control if needed, 
+        // but for now keeping it to match original behavior but invoking with new config
         this.main();
     }
 
@@ -71,7 +76,7 @@ class newswire {
         console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every 2 hours.');
         newsHash = await getHashToken();
 
-        await this.updateRSS();
+        if (this.enableRSS) await this.updateRSS();
 
         article = await this.getNewArticle();
         if (!(article instanceof TypeError) && article.title) {
@@ -80,11 +85,11 @@ class newswire {
         setInterval(async _ => {
             console.log('[REFRESH] Refreshing news feed for ' + this.genre);
 
-            await this.updateRSS();
+            if (this.enableRSS) await this.updateRSS();
 
             article = await this.getNewArticle();
             !(article instanceof TypeError) && article.title ? this.sendArticle(article) : console.log(article.message);
-        }, refreshInterval);
+        }, this.refreshInterval);
     }
 
     sendArticle(article) {
