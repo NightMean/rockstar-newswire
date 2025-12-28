@@ -46,7 +46,7 @@ class newswire {
         let article;
         console.log('[READY] Started news feed for ' + this.genre + '. Feed refreshes every 2 hours.');
         newsHash = await getHashToken();
-        
+
         await this.updateRSS();
 
         article = await this.getNewArticle();
@@ -55,7 +55,7 @@ class newswire {
         }
         setInterval(async _ => {
             console.log('[REFRESH] Refreshing news feed for ' + this.genre);
-            
+
             await this.updateRSS();
 
             article = await this.getNewArticle();
@@ -142,7 +142,7 @@ class newswire {
         console.log('[RSS] Updating RSS feed...');
         try {
             let res = await this.processRequest().catch(console.log);
-            
+
             if (res && res.errors != null) {
                 if (res.data == null && res.errors[0].message == 'PersistedQueryNotFound') {
                     console.log('[RSS] Token has expired, generating new one.');
@@ -178,16 +178,40 @@ class newswire {
                 let imageUrl = "";
                 try {
                     imageUrl = post.preview_images_parsed.newswire_block.d16x9;
-                } catch (e) {}
-                
+                } catch (e) { }
+
                 let link = 'https://www.rockstargames.com' + post.url;
+
+                // We will populate content later if possible, but for now we put title/preview
+                // actually we can't wait here because updateRSS is async but forEach is sync callback
+                // We should change to for...of loop to await content fetching
+            });
+
+            // Refactoring to for-of loop to support async operations
+            for (const post of articles) {
+                let imageUrl = "";
+                try {
+                    imageUrl = post.preview_images_parsed.newswire_block.d16x9;
+                } catch (e) { }
+
+                let link = 'https://www.rockstargames.com' + post.url;
+                let content = post.title; // Default fall back
+
+                try {
+                    const fullArticle = await this.getArticle(post.id);
+                    if (fullArticle) {
+                        content = this.parseContent(fullArticle);
+                    }
+                } catch (e) {
+                    console.error(`[RSS] Failed to fetch content for ${post.id}:`, e.message);
+                }
 
                 feed.addItem({
                     title: post.title,
                     id: post.id.toString(),
                     link: link,
                     description: post.title,
-                    content: post.title,
+                    content: content,
                     author: [
                         {
                             name: "Rockstar Games",
@@ -197,13 +221,132 @@ class newswire {
                     date: new Date(post.created),
                     image: imageUrl
                 });
-            });
+            }
 
             fs.writeFileSync('feed.xml', feed.rss2());
             console.log('[RSS] Feed updated successfully.');
         } catch (e) {
             console.error('[RSS] Failed to update feed:', e);
         }
+    }
+
+    async getArticle(id) {
+        return new Promise((resolve, reject) => {
+            const searchParams = new URLSearchParams([
+                ['operationName', 'NewswirePost'],
+                ['variables', JSON.stringify({
+                    locale: 'en_us',
+                    id_hash: id
+                })],
+                ['extensions', JSON.stringify({
+                    persistedQuery: {
+                        version: 1,
+                        sha256Hash: '555658813abe5acc8010de1a1feddd6fd8fddffbdc35d3723d4dc0fe4ded6810'
+                    }
+                })]
+            ]);
+
+            const req = request(mainLink + searchParams.toString(), requestOptions, (res) => {
+                if (res.statusCode < 200 || res.statusCode > 299)
+                    resolve(null); // Just return null on error to skip
+
+                let responseBody = "";
+                res.on('data', (chunk) => { responseBody += chunk; });
+                res.on('end', () => {
+                    try {
+                        const json = JSON.parse(responseBody);
+                        if (json.data && json.data.post) {
+                            resolve(json.data.post);
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (e) { resolve(null); }
+                });
+            });
+            req.on('error', (err) => { resolve(null); });
+            req.end();
+        });
+    }
+
+    parseContent(post) {
+        if (!post.tina || !post.tina.payload || !post.tina.payload.content) return post.title;
+
+        const imgBase = "https://media-rockstargames-com.akamaized.net";
+
+        const traverse = (node) => {
+            if (!node) return "";
+
+            if (Array.isArray(node)) {
+                return node.map(traverse).join("");
+            }
+
+            if (typeof node === 'object') {
+                let sectionHtml = "";
+
+                // Handle EventInfo / FeaturedEventInfo (Sections with optional Images and Titles)
+                if (['EventInfo', 'FeaturedEventInfo'].includes(node._template)) {
+                    // 1. Images
+                    if (node.images && Array.isArray(node.images)) {
+                        node.images.forEach(imgEntry => {
+                            if (imgEntry.image && imgEntry.image.sources) {
+                                let src = "";
+                                if (imgEntry.image.sources.en_us) {
+                                    src = imgEntry.image.sources.en_us.desktop || imgEntry.image.sources.en_us.mobile;
+                                }
+                                if (src) {
+                                    if (src.startsWith('/')) src = imgBase + src;
+                                    const alt = imgEntry.image._memoq?.alt || "Article Image";
+                                    // Removing conflicting styles, just standard img
+                                    sectionHtml += `<img src="${src}" alt="${alt}" /><br/>`;
+                                }
+                            }
+                        });
+                    }
+
+                    // 2. Title (Heading)
+                    if (node._memoq && node._memoq.title) {
+                        // User stated heading 2 shows, so we upgrading to h2 + strong to match standard headers
+                        sectionHtml += `<h2><strong>${node._memoq.title}</strong></h2>`;
+                    }
+
+                    // 3. Content (Recursive)
+                    if (node.content) {
+                        sectionHtml += traverse(node.content);
+                    }
+
+                    return sectionHtml + "<br/>";
+                }
+
+                // Handle Grid
+                if (node._template === 'Grid' && node.content) {
+                    return traverse(node.content);
+                }
+
+                // Handle HTMLElement (Raw HTML)
+                if (node._template === 'HTMLElement' && node._memoq && node._memoq.content) {
+                    return node._memoq.content + "<br/>";
+                }
+
+                // Handle RockstarVideoPlayer (or generic embed)
+                // In dump: _template: "RockstarVideoPlayer"
+                if (node._template === 'RockstarVideoPlayer') {
+                    // Usually videos might need special handling or might simply not be supported well in RSS without iframe
+                    // We can try to add a link or placeholder if needed, but for now ignoring or basic check
+                    // If there's no direct video URL, meaningful support is hard.
+                }
+
+                // Fallback: Traverse generic object keys if it's strictly a container we missed
+                // But generally sticking to the templates above is cleaner. 
+                // However, let's process 'content' key if it exists on unknown nodes
+                if (node.content) {
+                    return traverse(node.content);
+                }
+            }
+            return "";
+        };
+
+        const fullHtml = traverse(post.tina.payload.content);
+        return fullHtml || post.title;
     }
 
     async processRequest() {
@@ -223,7 +366,7 @@ class newswire {
                     }
                 })]
             ]);
-            
+
             const req = request(mainLink + searchParams.toString(), requestOptions, (res) => {
                 if (res.statusCode < 200 || res.statusCode > 299)
                     reject(new Error('[ERROR] Unable to process request: ' + res.statusCode + '\nReason: ' + res.statusMessage));
