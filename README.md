@@ -30,7 +30,7 @@ The application is configured via `config.yaml`.
 ```yaml
 services:
   rockstar-newswire-tracker:
-    image: nightmean/rockstar-newswire:latest
+    image: nightmean/rockstar-newswire:2.0.1
     container_name: rockstar-newswire-tracker
     restart: unless-stopped
     ports:
