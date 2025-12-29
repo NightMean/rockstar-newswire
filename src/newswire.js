@@ -521,6 +521,38 @@ class newswire {
                     // If there's no direct video URL, meaningful support is hard.
                 }
 
+                // Handle Embed
+                if (node._template === 'Embed' && node.items && Array.isArray(node.items)) {
+                    node.items.forEach(item => {
+                        if (item.embed) {
+                            let embedCode = item.embed;
+
+                            // Fix double '?' in URL if present
+                            // Regex to find src="..." and fix query params inside it
+                            embedCode = embedCode.replace(/src="([^"]+)"/g, (match, url) => {
+                                const parts = url.split('?');
+                                if (parts.length > 2) {
+                                    // Reconstruct: part[0]?part[1]&part[2]...
+                                    let newUrl = parts[0] + '?' + parts[1];
+                                    for (let i = 2; i < parts.length; i++) {
+                                        newUrl += '&' + parts[i];
+                                    }
+                                    return `src="${newUrl}"`;
+                                }
+                                return match;
+                            });
+
+                            // Adjust size to 100% width, maintain aspect ratio if possible, or just remove fixed dimensions
+                            // Replacing width="..." and height="..." with style="width:100%; aspect-ratio:16/9;"
+                            embedCode = embedCode.replace(/width="\d+"/g, 'width="100%"');
+                            embedCode = embedCode.replace(/height="\d+"/g, 'style="aspect-ratio: 16/9;"');
+
+                            sectionHtml += embedCode + "<br/>";
+                        }
+                    });
+                    return sectionHtml;
+                }
+
                 // Fallback: Traverse generic object keys if it's strictly a container we missed
                 // But generally sticking to the templates above is cleaner. 
                 // However, let's process 'content' key if it exists on unknown nodes
