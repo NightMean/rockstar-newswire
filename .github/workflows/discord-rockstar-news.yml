@@ -1,8 +1,14 @@
-# Runs on a schedule and manually. Fetches Rockstar Newswire RSS and posts the latest item to a Discord webhook.
+# Debug + force-post: fetch Rockstar Newswire RSS and post latest item to Discord.
+# Scheduled runs still post automatically; manual runs require force=true to post.
 on:
   schedule:
-    - cron: '*/30 * * * *'   # every 30 minutes — change as desired
+    - cron: '*/30 * * * *'   # every 30 minutes — keep or change
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Set to "true" to force-post latest item when running manually'
+        required: false
+        default: 'false'
 
 jobs:
   post-rockstar-news:
@@ -19,18 +25,21 @@ jobs:
       - name: Fetch latest Rockstar Newswire item and post to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          # Optional: set ROLE_MENTION to something like "<@&123456789012345678>" to ping a role
-          ROLE_MENTION: ${{ secrets.DISCORD_ROLE_MENTION }} 
+          ROLE_MENTION: ${{ secrets.DISCORD_ROLE_MENTION }}
+          FORCE: ${{ github.event.inputs.force }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
         run: |
           python - <<'PY'
-          import os, sys, feedparser, requests, html
+          import os, sys, feedparser, requests, html, json
           webhook = os.environ.get('DISCORD_WEBHOOK')
           role_mention = os.environ.get('ROLE_MENTION') or ''
+          force = (os.environ.get('FORCE','').lower() == 'true')
+          event_name = os.environ.get('EVENT_NAME','')
           if not webhook:
             print("DISCORD_WEBHOOK not set. Add it under repo Settings → Secrets and variables → Actions")
             sys.exit(1)
 
-          # Try common RSS endpoints; adjust if needed
           rss_urls = [
             "https://www.rockstargames.com/newswire?format=rss",
             "https://www.rockstargames.com/newswire.rss",
@@ -38,15 +47,19 @@ jobs:
           ]
 
           feed = None
+          tried = []
           for url in rss_urls:
+            tried.append(url)
             try:
               f = feedparser.parse(url)
               if f and f.entries:
                 feed = f
+                feed_url_used = url
                 break
             except Exception as e:
               print("Failed to parse", url, ":", e)
 
+          print("Tried feed URLs:", tried)
           if not feed or not feed.entries:
             print("No entries found in Rockstar Newswire feed. Exiting.")
             sys.exit(0)
@@ -54,21 +67,40 @@ jobs:
           entry = feed.entries[0]
           title = html.unescape(entry.get('title', 'No title'))
           link = entry.get('link', '')
-          # Some feeds include summary/detail in 'summary' or 'content'
-          summary = entry.get('summary', '') 
+          summary = entry.get('summary', '')
           if not summary and 'content' in entry and entry['content']:
             summary = entry['content'][0].get('value','')
-
-          # Truncate summary for Discord message length if needed
-          max_len = 1800
+          # Shorten summary for logs/payload
+          max_len = 1200
           if len(summary) > max_len:
             summary = summary[:max_len].rsplit(' ',1)[0] + "…"
 
-          content = f"{role_mention} **{title}**\n\n{summary}\n\n{link}"
-          payload = {"content": content}
+          message_text = f"{role_mention} **{title}**\n\n{summary}\n\n{link}"
+          payload = {"content": message_text}
 
-          resp = requests.post(webhook, json=payload, timeout=15)
-          print("Discord response:", resp.status_code, resp.text)
-          if resp.status_code >= 400:
+          # Log what we'll send (safe: does not print the webhook URL)
+          print("Event name:", event_name)
+          print("Force flag:", force)
+          print("First entry title:", title)
+          print("First entry link:", link)
+          print("Payload preview (truncated to 2000 chars):")
+          print(json.dumps(payload)[:2000])
+
+          should_post = (event_name == 'schedule') or force
+          if not should_post:
+            print("Not posting because this is a manual run without force=true. To post, run workflow_dispatch with force=true.")
+            sys.exit(0)
+
+          try:
+            resp = requests.post(webhook, json=payload, timeout=15)
+            print("Discord HTTP status:", resp.status_code)
+            # Discord commonly returns empty body (204). If there is a body, print it.
+            if resp.text:
+              print("Discord response body:", resp.text)
+            if resp.status_code >= 400:
+              print("POST failed, status >=400")
+              sys.exit(1)
+          except Exception as e:
+            print("Error sending to Discord webhook:", e)
             sys.exit(1)
           PY
