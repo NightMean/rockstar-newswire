@@ -5,7 +5,7 @@ on:
     - cron: '*/30 * * * *'   # every 30 minutes — keep or change
   workflow_dispatch:
     inputs:
-      force = true
+      force:
         description: 'Set to "true" to force-post latest item when running manually'
         required: false
         default: 'false'
