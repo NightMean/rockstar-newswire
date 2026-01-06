@@ -1,0 +1,36 @@
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Set to "true" to force post the latest item to Discord'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: '*/30 * * * *'  # optional: runs every 30 minutes
+
+jobs:
+  check-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Rockstar News check + optional post
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          # Optional: change genre to 'latest' or 'gta_online'
+          GENRE: 'gta_online'
+        run: |
+          node .github/scripts/check_and_post.js
