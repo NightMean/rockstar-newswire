@@ -9,7 +9,7 @@ mergeFeeds: true    # If true, all enabled genres are merged into one feed.xml. 
 # Discord Configuration
 # You can also set this using the DISCORD_WEBHOOK_URL environment variable (recommended for Docker).
 # If the environment variable is set, it will take precedence over this value.
-webhookUrl: "YOUR_WEBHOOK_URL_HERE"
+webhookUrl: "https://discordapp.com/api/webhooks/1458124204263346289/gG-0gKWuzqyexcZD0qe4d6MKZ0vCE3W8dd63kpxFIe5Xmik8s6pXtscVHqO20F6UohvF"
 
 # Discord Bot Profile
 discordProfileName: "Rockstar Newswire Tracker"
