@@ -1,0 +1,74 @@
+# Runs on a schedule and manually. Fetches Rockstar Newswire RSS and posts the latest item to a Discord webhook.
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # every 30 minutes — change as desired
+  workflow_dispatch:
+
+jobs:
+  post-rockstar-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install feedparser requests
+
+      - name: Fetch latest Rockstar Newswire item and post to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          # Optional: set ROLE_MENTION to something like "<@&123456789012345678>" to ping a role
+          ROLE_MENTION: ${{ secrets.DISCORD_ROLE_MENTION }} 
+        run: |
+          python - <<'PY'
+          import os, sys, feedparser, requests, html
+          webhook = os.environ.get('DISCORD_WEBHOOK')
+          role_mention = os.environ.get('ROLE_MENTION') or ''
+          if not webhook:
+            print("DISCORD_WEBHOOK not set. Add it under repo Settings → Secrets and variables → Actions")
+            sys.exit(1)
+
+          # Try common RSS endpoints; adjust if needed
+          rss_urls = [
+            "https://www.rockstargames.com/newswire?format=rss",
+            "https://www.rockstargames.com/newswire.rss",
+            "https://www.rockstargames.com/newswire"
+          ]
+
+          feed = None
+          for url in rss_urls:
+            try:
+              f = feedparser.parse(url)
+              if f and f.entries:
+                feed = f
+                break
+            except Exception as e:
+              print("Failed to parse", url, ":", e)
+
+          if not feed or not feed.entries:
+            print("No entries found in Rockstar Newswire feed. Exiting.")
+            sys.exit(0)
+
+          entry = feed.entries[0]
+          title = html.unescape(entry.get('title', 'No title'))
+          link = entry.get('link', '')
+          # Some feeds include summary/detail in 'summary' or 'content'
+          summary = entry.get('summary', '') 
+          if not summary and 'content' in entry and entry['content']:
+            summary = entry['content'][0].get('value','')
+
+          # Truncate summary for Discord message length if needed
+          max_len = 1800
+          if len(summary) > max_len:
+            summary = summary[:max_len].rsplit(' ',1)[0] + "…"
+
+          content = f"{role_mention} **{title}**\n\n{summary}\n\n{link}"
+          payload = {"content": content}
+
+          resp = requests.post(webhook, json=payload, timeout=15)
+          print("Discord response:", resp.status_code, resp.text)
+          if resp.status_code >= 400:
+            sys.exit(1)
+          PY
