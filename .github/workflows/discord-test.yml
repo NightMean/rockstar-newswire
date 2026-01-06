@@ -1,0 +1,21 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  discord-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test post to Discord webhook
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK secret is not set"; exit 1
+          fi
+          # Post a simple test payload and print the HTTP status
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" \
+            -d '{"content":"GitHub Actions test message (Rockstar Newsbot)"}' "$DISCORD_WEBHOOK")
+          echo "Discord webhook HTTP status: $HTTP"
+          if [ "$HTTP" -ge 400 ]; then
+            echo "POST failed"; exit 1
+          fi
